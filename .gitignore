@@ -3,3 +3,4 @@ deps
 *.beam
 *.swp
 rel/rival_realms
+.eunit

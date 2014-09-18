@@ -1,0 +1,12 @@
+{application, rival_realms,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { rival_realms_app, []}},
+  {env, []}
+ ]}.

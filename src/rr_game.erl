@@ -51,7 +51,7 @@ pile_for_player(#player{field=Field}, field) -> Field.
 card_from_game({Player, Where, Id}, #game{players=Players}) ->
   PlayerState = lists:keyfind(Player, #player.id, Players),
   Pile = pile_for_player(PlayerState, Where),
-  {Id, Card} = lists:keyfetch(Pile, 1, Id),
+  {Id, Card} = lists:keyfind(Id, 1, Pile),
   get_card(Card).
 
 %Can always play supply cards
@@ -78,21 +78,21 @@ play_card_if_allowed(allowed, #card{type=supply, attrs=Attrs},
 add_supply(Player, Supply, #game{players=Players}=Game) ->
   PlayerState = lists:keyfind(Player, #player.id, Players),
   SuppliedPlayer = PlayerState#player{supply= PlayerState#player.supply + Supply},
-  Game#game{players = lists:keyreplace(Players, #player.id, Player, SuppliedPlayer)}.
+  Game#game{players = lists:keyreplace(Player, #player.id, Players, SuppliedPlayer)}.
 
 remove_card(#game{players=Players}=Game, {Player, PileName, Id}) ->
   PlayerState = lists:keyfind(Player, #player.id, Players),
   Pile = pile_for_player(PlayerState, PileName),
-  {Card, UpdatedPile} = lists:keytake(Pile, 1, Id),
+  {value, Card, UpdatedPile} = lists:keytake(Id, 1, Pile),
   UpdatedPlayer = update_pile_for_player(PlayerState, PileName, UpdatedPile),
-  {Card, Game#game{players = lists:keyreplace(Players, #player.id, Player, UpdatedPlayer)}}.
+  {Card, Game#game{players = lists:keyreplace(Player, #player.id, Players, UpdatedPlayer)}}.
 
 add_card(#game{players=Players}=Game, Card, {Player, PileName}) ->
   PlayerState = lists:keyfind(Player, #player.id, Players),
   Pile = pile_for_player(PlayerState, PileName),
   UpdatedPile = [Card | Pile],
   UpdatedPlayer = update_pile_for_player(PlayerState, PileName, UpdatedPile),
-  Game#game{players = lists:keyreplace(Players, #player.id, Player, UpdatedPlayer)}.
+  Game#game{players = lists:keyreplace(Player, #player.id, Players, UpdatedPlayer)}.
 
 update_pile_for_player(#player{}=Player, hand, Hand) -> Player#player{hand=Hand};
 update_pile_for_player(#player{}=Player, discard, Discard) -> Player#player{discard=Discard};

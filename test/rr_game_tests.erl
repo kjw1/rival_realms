@@ -25,10 +25,32 @@ card_test_() ->
    fun(ok) ->
         [
           fun test_card_from_game/0,
-          fun test_card_def/0
+          fun test_card_def/0,
+          fun test_check_allowed/0
          ]
     end
   }.
+
+test_check_allowed() ->
+  EnoughSupply = #game{players =[#player{id=2}, #player{id=1, supply = 1, hand=[ {12, soldier}]} ]},
+  allowed = rr_game:check_allowed(deploy, 1, 1, {1, hand, 12}, 
+                                  rr_game:soldier_card(), {1, field}, EnoughSupply),
+  %Wrong turn
+  not_allowed = rr_game:check_allowed(deploy, 1, 2, {1, hand, 12}, 
+                                      rr_game:soldier_card(), {1, field}, EnoughSupply),
+  %Wrong phase
+  not_allowed = rr_game:check_allowed(atack, 1, 2, {1, hand, 12}, 
+                                      rr_game:soldier_card(), {1, field}, EnoughSupply),
+  %Wrong area
+  not_allowed = rr_game:check_allowed(atack, 1, 2, {1, hand, 12}, 
+                                      rr_game:soldier_card(), {1, lost}, EnoughSupply),
+  %Wrong player area
+  not_allowed = rr_game:check_allowed(atack, 1, 2, {1, hand, 12}, 
+                                      rr_game:soldier_card(), {2, field}, EnoughSupply),
+  Insufficient = #game{players =[#player{id=2}, #player{id=1, supply = 0, hand=[ {12, soldier}]} ]},
+  not_allowed = rr_game:check_allowed(deploy, 1, 1, {1, hand, 12}, 
+                                      rr_game:soldier_card(), {1, field}, Insufficient).
+  
 
 test_card_from_game() ->
   Game = #game{players =[#player{id=2}, #player{id=1, hand=[ {2, supply1}, {12, soldier}]} ]},

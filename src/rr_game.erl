@@ -57,7 +57,19 @@ card_from_game({Player, Where, Id}, #game{players=Players}) ->
 %Can always play supply cards
 check_allowed(_Phase, Player, _CurPlayer,
               {Player, hand, _Id}, #card{type=supply}, {Player, discard}, _Game) ->
-  allowed.
+  allowed;
+%Can deploy units on own deploy phase
+%If have enough supply for card
+check_allowed(deploy, Player, Player,
+              {Player, hand, _Id}, #card{cost=Cost, type=unit}, {Player, field}, Game) ->
+  #player{supply=Supply} = get_player(Game, Player),
+  case Supply of
+    Supply when Supply >= Cost -> allowed;
+    _Supply -> not_allowed
+  end;
+%Anything else not allowed
+check_allowed(_Phase, _Player, _CurPlayer, _From, _Card, _To, _Game) ->
+  not_allowed.
 
 play_card(Phase, Player, From, To, CurPlayer, Game) ->
   Card = card_from_game(From, Game),
@@ -75,17 +87,23 @@ play_card_if_allowed(allowed, #card{type=supply, attrs=Attrs},
   UpdatedSupply = add_supply(Player, Supply, AddedGame),
   UpdatedSupply.
 
-add_supply(Player, Supply, #game{players=Players}=Game) ->
-  PlayerState = lists:keyfind(Player, #player.id, Players),
+add_supply(Player, Supply, Game) ->
+  PlayerState = get_player(Game, Player),
   SuppliedPlayer = PlayerState#player{supply= PlayerState#player.supply + Supply},
-  Game#game{players = lists:keyreplace(Player, #player.id, Players, SuppliedPlayer)}.
+  update_player(Game, Player, SuppliedPlayer).
 
-remove_card(#game{players=Players}=Game, {Player, PileName, Id}) ->
-  PlayerState = lists:keyfind(Player, #player.id, Players),
+get_player(#game{players=Players}, Id) ->
+  lists:keyfind(Id, #player.id, Players).
+
+update_player(#game{players=Players}= Game, Player, PlayerState) ->
+  Game#game{players = lists:keyreplace(Player, #player.id, Players, PlayerState)}.
+
+remove_card(Game, {Player, PileName, Id}) ->
+  PlayerState = get_player(Game, Player),
   Pile = pile_for_player(PlayerState, PileName),
   {value, Card, UpdatedPile} = lists:keytake(Id, 1, Pile),
   UpdatedPlayer = update_pile_for_player(PlayerState, PileName, UpdatedPile),
-  {Card, Game#game{players = lists:keyreplace(Player, #player.id, Players, UpdatedPlayer)}}.
+  {Card, update_player(Game, Player, UpdatedPlayer)}.
 
 add_card(#game{players=Players}=Game, Card, {Player, PileName}) ->
   PlayerState = lists:keyfind(Player, #player.id, Players),

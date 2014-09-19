@@ -9,8 +9,8 @@
 -export([init/1,
          renew/2,
          renew/3,
-         %deploy/2,
-         %deploy/3,
+         deploy/2,
+         deploy/3,
          handle_event/3,
          handle_sync_event/4,
          handle_info/3,
@@ -75,6 +75,9 @@ init([]) ->
 renew(_Event, State) ->
     {next_state, renew, State}.
 
+deploy(_Event, State) ->
+    {next_state, renew, State}.
+
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
@@ -97,6 +100,11 @@ renew({CurPlayer, end_renew}, _From, #state{cur_player= CurPlayer} = State) ->
     {reply, ok, deploy, State};
 renew(_Event, _From, State) ->
     {reply, not_allowed, renew, State}.
+
+deploy({CurPlayer, end_deploy}, _From, #state{cur_player= CurPlayer} = State) ->
+    {reply, ok, attack, State};
+deploy(_Event, _From, State) ->
+    {reply, not_allowed, deploy, State}.
 
 
 %%--------------------------------------------------------------------
@@ -136,7 +144,7 @@ handle_sync_event({Player, play_card, From, To},
                   Phase,
                   #state{cur_player=CurPlayer, game=Game} = State) ->
   {Allowed, UpdatedGame} = rr_game:play_card(Phase, Player, From, To, CurPlayer, Game),
-  {reply, Allowed, Phase, State#state{game=UpdatedGame}}.
+  {reply, {Allowed, UpdatedGame}, Phase, State#state{game=UpdatedGame}}.
 
 %%--------------------------------------------------------------------
 %% @private

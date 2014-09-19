@@ -11,6 +11,8 @@
          renew/3,
          deploy/2,
          deploy/3,
+         attack/2,
+         attack/3,
          handle_event/3,
          handle_sync_event/4,
          handle_info/3,
@@ -78,6 +80,9 @@ renew(_Event, State) ->
 deploy(_Event, State) ->
     {next_state, renew, State}.
 
+attack(_Event, State) ->
+    {next_state, renew, State}.
+
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
@@ -106,6 +111,16 @@ deploy({CurPlayer, end_deploy}, _From, #state{cur_player= CurPlayer} = State) ->
 deploy(_Event, _From, State) ->
     {reply, not_allowed, deploy, State}.
 
+attack({CurPlayer, declare_attackers, Attackers},
+       _From, #state{game=Game, cur_player= CurPlayer} = State) ->
+  Allowed = rr_game:check_attackers(CurPlayer, Attackers, Game),
+  NextState = case Allowed of
+    allowed -> defend;
+    not_allowed -> attack
+  end,
+    {reply, Allowed, NextState, State};
+attack(_Event, _From, State) ->
+    {reply, not_allowed, deploy, State}.
 
 %%--------------------------------------------------------------------
 %% @private

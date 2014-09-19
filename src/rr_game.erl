@@ -1,5 +1,6 @@
 -module(rr_game).
 -export([init_rand/0, init_card_defs/0, new_game/0, get_card/1, shuffle_list/1, play_card/6]).
+-export([check_attackers/3]).
 
 -ifdef(TEST).
 -compile([export_all]).
@@ -122,3 +123,26 @@ update_pile_for_player(#player{}=Player, discard, Discard) -> Player#player{disc
 update_pile_for_player(#player{}=Player, deck, Deck) -> Player#player{deck=Deck};
 update_pile_for_player(#player{}=Player, lost, Lost) -> Player#player{lost=Lost};
 update_pile_for_player(#player{}=Player, field, Field) -> Player#player{field=Field}.
+
+check_attackers(Player, Attackers, Game) ->
+  PlayerState = get_player(Player, Game),
+  PlayerField = pile_for_player(PlayerState, field),
+  case check_attackers_in_field(PlayerField, Attackers) of
+    ok -> allowed;
+    invalid -> not_allowed
+  end.
+
+check_attackers_in_field(Field, Attackers) ->
+  try
+    case lists:all(fun(Attacker) ->
+            {Attacker, CardType} = lists:keyfind(Attacker, 1, Field),
+            #card{type=unit} =:= get_card(CardType)
+        end, Attackers) of
+      true -> ok;
+      false -> invalid
+    end
+  catch
+    _Error:_Exception ->
+      invalid
+  end.
+

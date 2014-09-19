@@ -26,10 +26,20 @@ card_test_() ->
         [
           fun test_card_from_game/0,
           fun test_card_def/0,
+          fun test_play_card/0,
           fun test_check_allowed/0
          ]
     end
   }.
+
+test_game() ->
+  #game{players =[#player{id=2}, #player{id=1, supply = 1, hand=[ {12, soldier}]} ]}.
+test_play_card() ->
+  Card = rr_game:soldier_card(),
+  Game = test_game(),
+  Result = rr_game:play_card_if_allowed(allowed, Card, {1, hand, 12}, {1, field}, Game),
+  ResultPlayer = rr_game:get_player(Result, 1),
+  #player{id=1, supply = 0, hand = [], field = [ {12, soldier} ]} = ResultPlayer.
 
 test_check_allowed() ->
   EnoughSupply = #game{players =[#player{id=2}, #player{id=1, supply = 1, hand=[ {12, soldier}]} ]},

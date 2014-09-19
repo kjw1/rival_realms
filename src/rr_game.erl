@@ -79,6 +79,11 @@ play_card(Phase, Player, From, To, CurPlayer, Game) ->
 
 play_card_if_allowed(not_allowed, _Card, _From, _To, Game) ->
   Game;
+play_card_if_allowed(allowed, #card{type=unit, cost=Cost}, 
+                     From, {Player, field}=To, #game{}=Game) ->
+  {Card, RemovedGame} = remove_card(Game, From),
+  PaidSupply = add_supply(Player, - Cost, RemovedGame),
+  add_card(PaidSupply, Card, To);
 play_card_if_allowed(allowed, #card{type=supply, attrs=Attrs}, 
                      From, {Player, discard}=To, #game{}=Game) ->
   {supply, Supply} = lists:keyfind(supply, 1, Attrs),

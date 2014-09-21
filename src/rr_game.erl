@@ -1,6 +1,6 @@
 -module(rr_game).
 -export([init_rand/0, init_card_defs/0, new_game/0, get_card/1, shuffle_list/1, play_card/6]).
--export([check_attackers/3]).
+-export([check_attackers/3, check_defenders/4]).
 
 -ifdef(TEST).
 -compile([export_all]).
@@ -124,25 +124,45 @@ update_pile_for_player(#player{}=Player, deck, Deck) -> Player#player{deck=Deck}
 update_pile_for_player(#player{}=Player, lost, Lost) -> Player#player{lost=Lost};
 update_pile_for_player(#player{}=Player, field, Field) -> Player#player{field=Field}.
 
+check_defenders(DefPlayer, Attackers, Defenders, Game) ->
+  ValidDefenders = check_defenders_on_field(DefPlayer, Defenders, Game),
+  ValidAttackers = check_declared_attackers_valid(Attackers, Defenders),
+  %%TODO check to see if attributes allow defense etc
+  Ok = lists:all(fun(IsAllowed) -> IsAllowed =:= true end, [ValidAttackers, ValidDefenders]),
+  bool_to_allow(Ok).
+
+check_declared_attackers_valid(Attackers, Defenders) ->
+  DeclaredAttackers = lists:map(fun({_DefenderList, Attacker}) -> Attacker end, Defenders),
+  lists:all(fun(DecAttacker) -> 
+        lists:any(fun(Attacker) -> Attacker=:= DecAttacker end, Attackers)
+    end, DeclaredAttackers).
+
+
+check_defenders_on_field(Player, Defenders, Game) ->
+  DefenderLists = lists:map(fun({DefenderList, _Attacker}) -> DefenderList end, Defenders),
+  lists:all(fun(DefenderList) -> 
+          allowed =:= check_attackers(Player, DefenderList, Game) 
+      end, DefenderLists).
+
 check_attackers(Player, Attackers, Game) ->
-  PlayerState = get_player(Player, Game),
+  PlayerState = get_player(Game, Player),
   PlayerField = pile_for_player(PlayerState, field),
-  case check_attackers_in_field(PlayerField, Attackers) of
-    ok -> allowed;
-    invalid -> not_allowed
-  end.
+  bool_to_allow( check_attackers_in_field(PlayerField, Attackers)) .
 
 check_attackers_in_field(Field, Attackers) ->
   try
-    case lists:all(fun(Attacker) ->
+    lists:all(fun(Attacker) ->
             {Attacker, CardType} = lists:keyfind(Attacker, 1, Field),
-            #card{type=unit} =:= get_card(CardType)
-        end, Attackers) of
-      true -> ok;
-      false -> invalid
-    end
+            %io:format("Got card: ~p~n", [get_card(CardType)]),
+            Card = get_card(CardType),
+            unit =:= Card#card.type
+        end, Attackers)
   catch
     _Error:_Exception ->
-      invalid
+      %io:format("Error ocurred: ~p~n", [Exception]),
+      false
   end.
+
+bool_to_allow(true) -> allowed;
+bool_to_allow(false) -> not_allowed.
 

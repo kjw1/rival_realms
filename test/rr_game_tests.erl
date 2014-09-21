@@ -27,6 +27,8 @@ card_test_() ->
           fun test_card_from_game/0,
           fun test_card_def/0,
           fun test_play_card/0,
+          fun test_check_attackers/0,
+          fun test_check_defenders/0,
           fun test_check_allowed/0
          ]
     end
@@ -84,3 +86,18 @@ add_card_test() ->
   NextGame = rr_game:add_card(Game, NewCard, {1, hand}),
   #game{players=[#player{id=2}, #player{id=1, hand=[ NewCard, {12, soldier}]}]} = NextGame.
 
+defender_test_game() ->
+  #game{players =[#player{id=2, field=[ {40, soldier}]},
+                  #player{id=1, supply = 1, field=[ {12, soldier}]} ]}.
+
+test_check_defenders() ->
+  Game = defender_test_game(),
+  Defenders = [ { [40], 12 }],
+  true = rr_game:check_defenders_on_field(2, Defenders, Game),
+  allowed = rr_game:check_defenders(2, [12], Defenders, Game).
+attacker_test_game() ->
+  #game{players =[#player{id=2}, #player{id=1, supply = 1, field=[ {12, soldier}]} ]}.
+test_check_attackers() ->
+  Game = ?debugVal(attacker_test_game()),
+  allowed = rr_game:check_attackers(1, [12], Game),
+  not_allowed = rr_game:check_attackers(1, [12, 7], Game).

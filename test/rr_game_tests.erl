@@ -4,7 +4,7 @@
 -type card_type() :: supply | unit | realm.
 -record(game, {players = []}).
 -record(player, {id, hand = [], discard = [], deck = [], lost = [], field = [], life = 20, supply = 0}).
--record(card, {key, cost = 0, reqs=[], type = supply :: card_type(), attrs = []}).
+-record(card_def, {key, cost = 0, reqs=[], type = supply :: card_type(), attrs = []}).
 
 new_game_test() ->
   #game{players= [ #player{}, #player{} ] } = ?debugVal(rr_game:new_game()).

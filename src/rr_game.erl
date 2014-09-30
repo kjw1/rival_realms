@@ -9,7 +9,9 @@
 -type card_type() :: supply | unit | realm.
 -record(game, {players = []}).
 -record(player, {id, hand = [], discard = [], deck = [], lost = [], field = [], life = 20, supply = 0}).
--record(card, {key, cost = 0, reqs=[], type = supply :: card_type(), attrs = []}).
+-record(card_def, {key, cost = 0, reqs=[], type = supply :: card_type(), attrs = []}).
+-type card_attachment() :: any()
+-record(card, {key, type, attached}).
 
 init_rand() ->
   <<A:32,B:32,C:32>> = crypto:rand_bytes(12),
@@ -24,20 +26,20 @@ test_deck() ->
   Supply ++  Units.
 
 supply_card() ->
-  #card{key = supply1, attrs=[ {supply, 1 } ]}.
+  #card_def{key = supply1, attrs=[ {supply, 1 } ]}.
 soldier_card() ->
-  #card{key = soldier, cost = 1, type = unit, attrs=[ {attack, 1}, {defense, 1} ]}.
+  #card_def{key = soldier, cost = 1, type = unit, attrs=[ {attack, 1}, {defense, 1} ]}.
 
 test_player(Id) ->
   #player{id= Id, deck=shuffle_list(test_deck())}.
 
 init_card_defs() ->
-  card_defs = ets:new(card_defs, [public, named_table, {keypos, #card.key}]),
+  card_defs = ets:new(card_defs, [public, named_table, {keypos, #card_def.key}]),
   ets:insert(card_defs, supply_card()),
   ets:insert(card_defs, soldier_card()).
 
 get_card(Id) ->
-  [#card{} = Card] =  ets:lookup(card_defs, Id),
+  [#card_def{} = Card] =  ets:lookup(card_defs, Id),
   Card.
 
 new_game() ->
@@ -57,12 +59,12 @@ card_from_game({Player, Where, Id}, #game{players=Players}) ->
 
 %Can always play supply cards
 check_allowed(_Phase, Player, _CurPlayer,
-              {Player, hand, _Id}, #card{type=supply}, {Player, discard}, _Game) ->
+              {Player, hand, _Id}, #card_def{type=supply}, {Player, discard}, _Game) ->
   allowed;
 %Can deploy units on own deploy phase
 %If have enough supply for card
 check_allowed(deploy, Player, Player,
-              {Player, hand, _Id}, #card{cost=Cost, type=unit}, {Player, field}, Game) ->
+              {Player, hand, _Id}, #card_def{cost=Cost, type=unit}, {Player, field}, Game) ->
   #player{supply=Supply} = get_player(Game, Player),
   case Supply of
     Supply when Supply >= Cost -> allowed;
@@ -80,12 +82,12 @@ play_card(Phase, Player, From, To, CurPlayer, Game) ->
 
 play_card_if_allowed(not_allowed, _Card, _From, _To, Game) ->
   Game;
-play_card_if_allowed(allowed, #card{type=unit, cost=Cost}, 
+play_card_if_allowed(allowed, #card_def{type=unit, cost=Cost}, 
                      From, {Player, field}=To, #game{}=Game) ->
   {Card, RemovedGame} = remove_card(Game, From),
   PaidSupply = add_supply(Player, - Cost, RemovedGame),
   add_card(PaidSupply, Card, To);
-play_card_if_allowed(allowed, #card{type=supply, attrs=Attrs}, 
+play_card_if_allowed(allowed, #card_def{type=supply, attrs=Attrs}, 
                      From, {Player, discard}=To, #game{}=Game) ->
   {supply, Supply} = lists:keyfind(supply, 1, Attrs),
   {Card, RemovedGame} = remove_card(Game, From),
@@ -155,7 +157,7 @@ check_attackers_in_field(Field, Attackers) ->
             {Attacker, CardType} = lists:keyfind(Attacker, 1, Field),
             %io:format("Got card: ~p~n", [get_card(CardType)]),
             Card = get_card(CardType),
-            unit =:= Card#card.type
+            unit =:= Card#card_def.type
         end, Attackers)
   catch
     _Error:_Exception ->
